@@ -6,7 +6,7 @@ a reliable way to transfer larger files you can
 send the files individually using this program.
 
 ## Senders:
-- To run this program be in the FileServer dir, you will need a folder
+- To run this program be in the mp3-sender dir, you will need a folder
 which contains your files or know the relative path to it. 
 - If you want detailed progress updates run without the '--release' flag this will cause
 the program to run slower.
