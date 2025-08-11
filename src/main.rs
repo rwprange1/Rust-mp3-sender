@@ -1,10 +1,10 @@
 
 use std::{net::{TcpStream, TcpListener}, env, thread, cmp};
 use threadpool::ThreadPool;
-use std::fs::{read_dir, OpenOptions};
+use std::fs::{ OpenOptions};
 use std::io::{ BufReader, Read, Write};
 use std::net::Shutdown;
-use std::path::{Path, PathBuf};
+use std::path::{Path};
 use std::process::exit;
 use std::sync::{Arc, Mutex};
 
@@ -65,7 +65,7 @@ fn main(){
     };
     
     match run {
-        0 => {
+        1 => {
             let dir = Path::new(&args[1]);
             if !dir.exists() || !dir.is_dir(){
                 println!("{} is not a directory", args[1]);
@@ -98,7 +98,7 @@ fn send_mp3(file_path: &String, ip: &String, port: usize) {
 
     let shared_data = Arc::new(Mutex::new(files));
   
-    for i in 0..num_threads{
+    for _ in 0..num_threads{
         let data_clone = shared_data.clone();
         let file_path = String::from(file_path);
         let ip_clone = ip.clone();
