@@ -50,7 +50,7 @@ fn main(){
     
     
     
-    let port = match args[index+1].parse::<u64>(){
+    let port = match args[index+1].parse::<usize>(){
         Ok(p) => {
             if p > 65535{
                 println!("Not a valid port");
@@ -80,7 +80,7 @@ fn main(){
     
 }
 
-fn send_mp3(file_path: &String, ip: &String, port: u64) {
+fn send_mp3(file_path: &String, ip: &String, port: usize) {
     let mut num_threads = 10;
     let pool = ThreadPool::new(num_threads);
     let dir = Path::new(file_path);
@@ -103,7 +103,7 @@ fn send_mp3(file_path: &String, ip: &String, port: u64) {
         let file_path = String::from(file_path);
         let ip_clone = ip.clone();
         pool.execute(move || {
-            send_file(data_clone, file_path, &ip_clone,i + port as usize);
+            send_file(data_clone, file_path, &ip_clone, port);
         });
 
     }
@@ -114,7 +114,7 @@ fn send_mp3(file_path: &String, ip: &String, port: u64) {
 
 
 
-fn server(ip: &String, port: u64) {
+fn server(ip: &String, port: usize) {
     let shared_data = Arc::new(Mutex::new(ErrCnt{errors: 0}));
     let listener = TcpListener::bind(format!("{}:{}", ip,port)).unwrap();
     let mut threads= Vec::new();
