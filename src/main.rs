@@ -1,9 +1,10 @@
-use std::{net::{TcpStream, TcpListener}, env};
+
+use std::{net::{TcpStream, TcpListener}, env, thread, cmp};
 use threadpool::ThreadPool;
 use std::fs::{read_dir, OpenOptions};
 use std::io::{ BufReader, Read, Write};
 use std::net::Shutdown;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::sync::{Arc, Mutex};
 
@@ -80,20 +81,23 @@ fn main(){
 }
 
 fn send_mp3(file_path: &String, ip: &String, port: u64) {
-    let num_threads = 10;
+    let mut num_threads = 10;
     let pool = ThreadPool::new(num_threads);
     let dir = Path::new(file_path);
     let mut files = Files{files: Vec::new()};
 
     if dir.is_dir(){
         
-        for entry in read_dir(dir).unwrap(){
-            files.files.push(String::from(entry.unwrap().path().to_str().unwrap()));
+        let read_dir = dir.read_dir().unwrap();
+        
+        for entry in read_dir{
+            files.files.push(entry.unwrap().path().to_str().unwrap().to_string());
         }
+        num_threads = cmp::min(num_threads,  (files.files.len()/100usize) +1);
     }
 
     let shared_data = Arc::new(Mutex::new(files));
-
+  
     for i in 0..num_threads{
         let data_clone = shared_data.clone();
         let file_path = String::from(file_path);
@@ -111,36 +115,30 @@ fn send_mp3(file_path: &String, ip: &String, port: u64) {
 
 
 fn server(ip: &String, port: u64) {
-    let num_threads = 10;
     let shared_data = Arc::new(Mutex::new(ErrCnt{errors: 0}));
-    let pool = ThreadPool::new(num_threads);
+    let listener = TcpListener::bind(format!("{}:{}", ip,port)).unwrap();
+    let mut threads= Vec::new();
     
-    for i in 0..num_threads{
-        let cloned_data = shared_data.clone();
-        let ip_clone = ip.clone();
-        pool.execute(move || {
-                let listener = TcpListener::bind(format!("{}:{}", ip_clone, port as usize + i)).unwrap();
-            
-            debug_assert!({
-                println!("Server running on {}", format!("{}:{}", ip_clone, port as usize + i));
-                true
-            });
-            
-            match listener.accept() {
-                Ok(stream) => {
-                        read_file(stream.0, cloned_data);
-                        return;
-                    },
-                    Err(e) => {
-                        println!("{}", e);
-                        return;
-                    } 
+    
+    for stream in listener.incoming(){
+        match stream {
+            Ok(stream) => {
+                let cloned_data = shared_data.clone();
+                
+                let handle = thread::spawn(move || {
+                    read_file(stream, cloned_data);
+                });
+                threads.push(handle);
+            },
+            Err(e) => {
+                println!("failed {}" ,e);
             }
-        });
-        
+        }
     }
     
-    pool.join();
+    for handle in threads {
+        handle.join().unwrap();
+    }
 }
 
 
